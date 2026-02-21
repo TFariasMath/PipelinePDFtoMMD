@@ -1,0 +1,23 @@
+# Datos de Procesamiento
+input/
+output/
+failed/
+checkpoint/
+
+# Resultados Directos
+*.mmd
+*.json
+*.log
+
+# Entorno Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+
+# Sistema
+.DS_Store
+Thumbs.db
+doc_dir.txt
