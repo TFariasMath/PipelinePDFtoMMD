@@ -4,10 +4,23 @@ output/
 failed/
 checkpoint/
 
-# Resultados Directos
+# Resultados Directos y Temporales
 *.mmd
 *.json
 *.log
+*.tex
+*.pdf
+doc_dir.txt
+
+# Scripts de Desarrollo y Pruebas
+test_*.py
+stress_test_launcher.py
+generate_adversarial_data.py
+reproduce_bug.py
+dump_adversarial.py
+verify_compilability.py
+health_check.py
+adversarial_*
 
 # Entorno Python
 __pycache__/
@@ -20,4 +33,3 @@ venv/
 # Sistema
 .DS_Store
 Thumbs.db
-doc_dir.txt

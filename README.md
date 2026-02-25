@@ -1,47 +1,38 @@
-# Nougat OCR Pipeline: Mathematical PDF to Markdown
+# Nougat OCR Pipeline
 
-Este repositorio contiene un pipeline optimizado para la conversion de documentos PDF a formatos estructurados como Markdown (.mmd) y JSON. Basado en el modelo Nougat de Meta AI.
+Pipeline optimizado para la conversion de documentos PDF a formatos estructurados (Markdown/JSON/LaTeX) enfocada en contenido cientifico y matematico.
 
-## Caracteristicas Principales
+## Core Capabilities
 
 ### Estabilizacion de Dependencias
-El sistema incluye parches para asegurar la compatibilidad entre versiones de las siguientes librerias:
-- **Transformers**: Resolucion de conflictos en la clase de configuracion.
-- **Albumentations/Pydantic**: Correccion de esquemas de validacion para la compresion de imagenes.
-- **pypdfium2**: Adaptacion para soporte multiversion en entornos Windows y Linux.
+Implementacion de parches quirurgicos para asegurar la compatibilidad entre versiones criticas:
+- **Transformers**: Resolucion de conflictos en `PreTrainedConfig`.
+- **Albumentations/Pydantic**: Correccion de validacion en esquemas de compresion de imagenes.
+- **pypdfium2**: Soporte multiversion para renderizado en Windows/Linux.
 
 ### Optimizacion de Recuperacion
-Se ha implementado el flag `--no-skipping` para desactivar el heuristico de Nougat que descarta paginas ante la deteccion de repeticiones de texto. Esto asegura la captura de contenido en diagramas complejos o tablas densas.
+Uso del flag `--no-skipping` para desactivar heuristicos de Nougat que descartan contenido ante repeticiones tectuales, asegurando la integridad en diagramas y tablas densas.
 
-### Salida Orientada a RAG
-Ademas del Markdown estandar, el pipeline genera archivos JSON con:
-- Metadatos de ecuaciones (conteo y extraccion).
-- Estructura de secciones.
-- Capturas de subtitulos de figuras.
+### Salidas Generadas
+- **Markdown (.mmd)**: Salida cruda de Nougat.
+- **LaTeX (.tex)**: Documento estructurado listo para compilacion academica.
+- **Audit Report (PDF)**: Verificacion visual dinamica de paginas detectadas como vacias.
+- **JSON**: Metadatos de ecuaciones y secciones para ingesta RAG.
 
-## Componentes del Proyecto
+## Setup y Uso
 
-1. **nougat_local.py**: Script principal para ejecucion en sistemas locales (Windows/Linux).
-2. **nougat_pipeline.ipynb**: Notebook optimizado para ejecucion en Google Colab con soporte para GPU T4.
-3. **build_notebook.py**: Script generador para mantener la integridad del notebook y sus parches.
-4. **local_setup.bat**: Instalador automatizado de entorno para Windows.
+### Local (Windows)
+1. Instalar dependencias: `local_setup.bat`.
+2. PDFs en carpeta `input/`.
+3. Ejecutar: `python nougat_local.py`.
 
-## Instalacion y Uso
+### Cloud (Colab)
+1. Cargar `nougat_pipeline.ipynb`.
+2. Activar T4 GPU.
+3. Seguir celdas de configuracion.
 
-### Entorno Local (Windows)
-1. Ejecutar `local_setup.bat` para configurar las dependencias de Python.
-2. Colocar los archivos PDF en la carpeta `input/`.
-3. Ejecutar `python nougat_local.py`.
-4. Los resultados se encontraran en la carpeta `output/`.
-
-### Google Colab
-1. Subir `nougat_pipeline.ipynb` a Google Colab.
-2. Asegurarse de utilizar un entorno con GPU (T4 o superior).
-3. Seguir los pasos numerados dentro del notebook.
-
-## Estructura de Datos
-El pipeline organiza los archivos de la siguiente manera:
-- `/input`: PDFs por procesar.
-- `/output`: Archivos .mmd y .json generados.
-- `/failed`: PDFs que presentaron errores durante el proceso.
-- `/checkpoint`: Registro de estado (registry.json) y logs de operacion.
+## Folder Structure
+- `/input`: Fuente.
+- `/output`: Resultados (.mmd, .json, .tex, .pdf).
+- `/failed`: Captura de errores de procesamiento.
+- `/checkpoint`: Persistencia y logs.
