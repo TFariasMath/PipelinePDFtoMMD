@@ -21,7 +21,6 @@ def mmd_to_latex(mmd_content, title="Export"):
         "\\newpage"
     ]
     
-    # 1. Protección de Matemáticas (Intocables)
     protected_math = []
     def save_math(m):
         protected_math.append(m.group(0))
@@ -34,8 +33,6 @@ def mmd_to_latex(mmd_content, title="Export"):
     # Marcamos entornos matemáticos
     body = re.sub(r'\\\(.*?\\\)|\\\[.*?\\\]', save_math, body, flags=re.DOTALL)
 
-    # Identificamos comandos comunes que Nougat suele poner y los convertimos a nuestros marcadores
-    # Usamos un bucle para manejar anidación (ej. \section{...\textbf{...}}) de adentro hacia afuera
     raw_cmds_map = {
         r'\\section\*?\{([^{}]*)\}': r'LSECS\1LEND',
         r'\\subsection\*?\{([^{}]*)\}': r'LSUBS\1LEND',
@@ -55,7 +52,6 @@ def mmd_to_latex(mmd_content, title="Export"):
                 any_change = True
         if not any_change: break
 
-    # 2. Marcaje de Estructuras Markdown
     body = re.sub(r'^###### (.*)', r'LSTARTPAGS\1LEND', body, flags=re.MULTILINE)
     body = re.sub(r'^##### (.*)', r'LSTARTPAGS\1LEND', body, flags=re.MULTILINE)
     body = re.sub(r'^#### (.*)', r'LPARAGS\1LEND', body, flags=re.MULTILINE)
@@ -63,11 +59,9 @@ def mmd_to_latex(mmd_content, title="Export"):
     body = re.sub(r'^## (.*)', r'LSUBS\1LEND', body, flags=re.MULTILINE)
     body = re.sub(r'^# (.*)', r'LSECS\1LEND', body, flags=re.MULTILINE)
     
-    # Formatos (Non-greedy)
     body = re.sub(r'\*\*(.*?)\*\*', r'LBOLDS\1LEND', body)
     body = re.sub(r'\*(.*?)\*', r'LITALS\1LEND', body)
 
-    # 3. Escape de Caracteres Especiales (en todo el cuerpo, incluyendo títulos marcados)
     special_chars = {
         '&': r'\&', '%': r'\%', '$': r'\$', '_': r'\_', 
         '{': r'\{', '}': r'\}', '#': r'\#', '~': r'\textasciitilde{}', '^': r'\textasciicircum{}'
@@ -76,7 +70,6 @@ def mmd_to_latex(mmd_content, title="Export"):
     for char, replacement in special_chars.items():
         body = body.replace(char, replacement)
 
-    # 4. Finalización de Marcadores a LaTeX
     body = body.replace("LSECS", r"\section{")
     body = body.replace("LSUBS", r"\subsection{")
     body = body.replace("LSUBSUBS", r"\subsubsection{")
@@ -86,7 +79,6 @@ def mmd_to_latex(mmd_content, title="Export"):
     body = body.replace("LITALS", r"\textit{")
     body = body.replace("LEND", "}") 
 
-    # 5. Listas
     lines = body.split('\n')
     new_lines = []
     in_list = False
@@ -104,7 +96,6 @@ def mmd_to_latex(mmd_content, title="Export"):
     if in_list: new_lines.append('\\end{itemize}')
     body = '\n'.join(new_lines)
 
-    # 6. Restaurar Matemáticas
     def restore_math(m):
         idx = int(m.group(1))
         return protected_math[idx] if idx < len(protected_math) else m.group(0)
