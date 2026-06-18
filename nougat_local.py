@@ -13,6 +13,7 @@ import post_processor
 BASE_DIR = Path(os.getcwd())
 MODEL_SIZE = "0.1.0-small" # [Opciones: "0.1.0-small", "0.1.0-base"]
 FORCE_REPROCESS = False    # Cambiar a True para forzar el procesamiento de archivos ya registrados
+LATEX_LANGUAGE = "spanish" # Idioma para el paquete babel de LaTeX (e.g. "spanish", "english")
 STRUCTURE = {
     "input": BASE_DIR / "input",
     "output": BASE_DIR / "output",
@@ -78,32 +79,64 @@ def extract_structured_data(mmd_path):
     with open(mmd_path, "r", encoding="utf-8") as f:
         content = f.read()
     
-    b = chr(92)
-    p_inline = b*3 + chr(40) + ".*?" + b*3 + chr(41)
-    p_block = b*3 + chr(91) + ".*?" + b*3 + chr(93)
+    p_inline = r"\\\(.*?\\\)"
+    p_block = r"\\\[.*?\\\]"
     
     equations = re.findall(f"{p_inline}|{p_block}", content, re.DOTALL)
     print(f"Ecuaciones detectadas: {len(equations)}")
     
-    p_caption = chr(91) + "caption" + chr(93) + r".*?\n"
+    p_caption = r"\[caption\].*?\n"
     captions = re.findall(p_caption, content)
     
     sections = []
-    current_title = "Preliminares"
+    current_hierarchy = ["Preliminares", "", "", ""]
+    current_level = 1
     current_lines = []
     
     lines = content.replace("\r\n", "\n").split("\n")
     for line in lines:
-        if line.startswith("# ") or line.startswith("## "):
+        header_match = re.match(r'^(#{1,4})\s+(.*)$', line)
+        if header_match:
             if current_lines:
-                sections.append({"title": current_title, "content": "\n".join(current_lines)})
-            current_title = line.replace("#", "").strip()
+                section_text = "\n".join(current_lines).strip()
+                if section_text:
+                    hierarchy_path = [h for h in current_hierarchy if h]
+                    sections.append({
+                        "title": current_hierarchy[current_level - 1],
+                        "hierarchy": hierarchy_path,
+                        "full_title": " > ".join(hierarchy_path),
+                        "level": current_level,
+                        "content": section_text,
+                        "metrics": {
+                            "characters": len(section_text),
+                            "estimated_tokens": int(len(section_text.split()) * 1.3)
+                        }
+                    })
+            level = len(header_match.group(1))
+            title = header_match.group(2).strip()
+            current_level = level
+            current_hierarchy[level - 1] = title
+            for i in range(level, 4):
+                current_hierarchy[i] = ""
             current_lines = []
         else:
             current_lines.append(line)
             
     if current_lines:
-        sections.append({"title": current_title, "content": "\n".join(current_lines)})
+        section_text = "\n".join(current_lines).strip()
+        if section_text:
+            hierarchy_path = [h for h in current_hierarchy if h]
+            sections.append({
+                "title": current_hierarchy[current_level - 1],
+                "hierarchy": hierarchy_path,
+                "full_title": " > ".join(hierarchy_path),
+                "level": current_level,
+                "content": section_text,
+                "metrics": {
+                    "characters": len(section_text),
+                    "estimated_tokens": int(len(section_text.split()) * 1.3)
+                }
+            })
 
     print(f"Secciones identificadas: {len(sections)}")
     return {
@@ -212,21 +245,30 @@ def main():
 
             expected_md = STRUCTURE["output"] / f"{pdf_path.stem}.mmd"
             if expected_md.exists():
-                # 1. RAG JSON
-                save_structured_json(expected_md)
-                
-                # 2. LaTeX Generation
-                log_message(f"Generando LaTeX para {pdf_path.name}...")
                 with open(expected_md, "r", encoding="utf-8") as f:
                     mmd_content = f.read()
-                latex_code = post_processor.mmd_to_latex(mmd_content, title=pdf_path.stem)
-                with open(expected_md.with_suffix(".tex"), "w", encoding="utf-8") as f:
-                    f.write(latex_code)
-                
-                # 3. Blank Page Audit Report
+
+                # 1. Reporte de Auditoría de Páginas Vacías (usar contenido crudo)
                 audit_pdf_path = STRUCTURE["output"] / f"{pdf_path.stem}_auditoria_blancos.pdf"
                 if post_processor.generate_blank_page_report(pdf_path, mmd_content, audit_pdf_path):
                     log_message(f"Reporte de auditoría generado: {audit_pdf_path.name}")
+
+                # 2. Recuperación de páginas omitidas vía Tesseract OCR
+                log_message(f"Buscando páginas omitidas para recuperar en {pdf_path.name}...")
+                recovered_mmd = post_processor.recover_missing_pages(pdf_path, mmd_content, LATEX_LANGUAGE)
+                if recovered_mmd != mmd_content:
+                    with open(expected_md, "w", encoding="utf-8") as f:
+                        f.write(recovered_mmd)
+                    mmd_content = recovered_mmd
+
+                # 3. RAG JSON (ahora con contenido recuperado)
+                save_structured_json(expected_md)
+                
+                # 4. Generación LaTeX (con contenido recuperado)
+                log_message(f"Generando LaTeX para {pdf_path.name}...")
+                latex_code = post_processor.mmd_to_latex(mmd_content, title=pdf_path.stem, language=LATEX_LANGUAGE)
+                with open(expected_md.with_suffix(".tex"), "w", encoding="utf-8") as f:
+                    f.write(latex_code)
                 
                 state.mark_success(f_hash, pdf_path.name, expected_md)
                 log_message(f"Exito: {pdf_path.name}")
